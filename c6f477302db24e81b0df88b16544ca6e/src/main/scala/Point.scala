@@ -7,3 +7,8 @@ case class Point(
                 x2 : Long,
                 y2 : Long
                 )
+
+case class Target_point(
+                       x : Long,
+                       y : Long
+                       )
