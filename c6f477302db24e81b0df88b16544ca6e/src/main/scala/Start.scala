@@ -1,4 +1,6 @@
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.functions._
 
 import scala.collection.mutable
 
@@ -9,15 +11,17 @@ class Start {
     .getOrCreate()
 
   def getData : Unit = {
-    val data = sparkSession.read.json("./src/main/resources/dataMay-31-2017.json")
-    //val keys_array = data.first().get(0).asInstanceOf[mutable.WrappedArray[String]]
-    val values_array = data.first().get(1).asInstanceOf[mutable.WrappedArray[mutable.WrappedArray[Long]]]
-    val array = new Array[Point](values_array.length)
+    val file = "./src/main/resources/dataMay-31-2017.json"
+    val parsed = sparkSession.sparkContext.wholeTextFiles(file).values
+    val data = sparkSession.read.json(parsed)
+    val points = data.withColumn("data", explode(data.col("data"))).select("data")
+    val array = new Array[Point](points.count().asInstanceOf[Int])
     var i = 0
-    values_array.foreach { value =>
-      array.update(i, Point(value.apply(0), value.apply(1), value.apply(2), value.apply(3)))
+    points.foreach { value => var temp = value.apply(0).asInstanceOf[mutable.WrappedArray[Long]]
+      array.update(i, Point(temp.apply(0), temp.apply(1), temp.apply(2), temp.apply(3))) // nie podmienia wartości
       i += 1;
     }
+    array.foreach(println)
     val team1_apriori = array.length.toFloat / (2 * array.length)
     val team2_apriori = array.length.toFloat / (2 * array.length)
     val target = Target_point(30, 30)
@@ -37,20 +41,20 @@ class Start {
   def check_blue (target:Target_point, radius:Int, item:Point) : Boolean = {
     val punkt = Target_point(item.x1, item.y1)
     if(Math.sqrt(pow(punkt.x - target.x) + pow(punkt.y - target.y)) < radius)
-      return true
+      true
     else
-      return false
+      false
   }
 
   def check_red (target:Target_point, radius:Int, item:Point) : Boolean = {
     val punkt = Target_point(item.x2, item.y2)
     if(Math.sqrt(pow(punkt.x - target.x) + pow(punkt.y - target.y)) < radius)
-      return true
+      true
     else
-      return false
+      false
   }
 
   def pow(l : Long) : Long = {
-    return l * l
+    l * l
   }
 }
